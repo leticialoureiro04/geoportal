@@ -8,6 +8,8 @@ let themes = [];
 let features = [];
 let themeVisibility = {};
 let themeLayers = {};
+let queryMarker = null;
+let queryCircle = null;
 
 const map = L.map('map').setView([41.69, -8.83], 13);
 
@@ -189,7 +191,90 @@ function generateFeatureName() {
     return `${themeName} ${features.length + 1}`;
 }
 
+function clearQueryLayers() {
+    if (queryMarker !== null) {
+        map.removeLayer(queryMarker);
+        queryMarker = null;
+    }
+
+    if (queryCircle !== null) {
+        map.removeLayer(queryCircle);
+        queryCircle = null;
+    }
+}
+
+function renderNearbyResults(data) {
+    const status = document.getElementById('query-status');
+    const results = document.getElementById('query-results');
+
+    results.innerHTML = '';
+
+    if (data.count === 0) {
+        status.textContent = `Nenhum elemento encontrado num raio de ${data.radius} m.`;
+        return;
+    }
+
+    status.textContent =
+        `${data.count} elemento(s) encontrado(s) num raio de ${data.radius} m.`;
+
+    data.features.forEach(feature => {
+        const li = document.createElement('li');
+        li.className = 'query-result-item';
+
+        const distance = Math.round(feature.distance_m);
+
+        const name = document.createElement('strong');
+        name.textContent = feature.name;
+
+        const details = document.createElement('span');
+        details.textContent = `${feature.theme_name} - ${distance} m`;
+
+        li.appendChild(name);
+        li.appendChild(document.createElement('br'));
+        li.appendChild(details);
+
+        results.appendChild(li);
+    });
+}
+
+async function searchNearbyFeatures(latlng) {
+    const radiusInput = document.getElementById('query-radius');
+    const radius = parseFloat(radiusInput.value) || 500;
+
+    document.getElementById('query-status').textContent =
+        'A procurar elementos no raio definido...';
+
+    clearQueryLayers();
+
+    queryMarker = L.marker([latlng.lat, latlng.lng]).addTo(map);
+    queryCircle = L.circle([latlng.lat, latlng.lng], {
+        radius: radius,
+        color: '#2563eb',
+        weight: 2,
+        fillColor: '#93c5fd',
+        fillOpacity: 0.15
+    }).addTo(map);
+
+    const params = new URLSearchParams({
+        lat: latlng.lat,
+        lng: latlng.lng,
+        radius: radius
+    });
+
+    const response = await fetch(`${API_URL}/features/nearby?${params}`);
+    const data = await response.json();
+
+    renderNearbyResults(data);
+}
+
 map.on('click', function (event) {
+    const queryMode = document.getElementById('query-mode');
+
+    if (queryMode.checked) {
+        searchNearbyFeatures(event.latlng);
+        return;
+    }
+
     selectedLat = event.latlng.lat;
     selectedLng = event.latlng.lng;
 
@@ -215,6 +300,21 @@ document
         const nameInput = document.getElementById('feature-name');
 
         nameInput.value = generateFeatureName();
+    });
+
+document
+    .getElementById('query-mode')
+    .addEventListener('change', function (event) {
+        if (event.target.checked) {
+            document.getElementById('query-status').textContent =
+                'Clique no mapa para procurar elementos no raio definido.';
+            return;
+        }
+
+        clearQueryLayers();
+        document.getElementById('query-results').innerHTML = '';
+        document.getElementById('query-status').textContent =
+            'Ative a consulta e clique no mapa.';
     });
 
 document

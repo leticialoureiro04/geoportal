@@ -103,6 +103,82 @@ def get_features():
     return jsonify(features)
 
 
+@app.route("/features/nearby", methods=["GET"])
+def get_nearby_features():
+    lat = request.args.get("lat", type=float)
+    lng = request.args.get("lng", type=float)
+    radius = request.args.get("radius", default=500, type=float)
+
+    if lat is None or lng is None:
+        return {
+            "error": "Os parametros lat e lng sao obrigatorios."
+        }, 400
+
+    if radius <= 0:
+        return {
+            "error": "O raio deve ser superior a zero."
+        }, 400
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            f.id,
+            f.theme_id,
+            t.name,
+            f.name,
+            f.description,
+            ST_X(f.geom),
+            ST_Y(f.geom),
+            ST_Distance(
+                f.geom::geography,
+                ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography
+            ) AS distance_m
+        FROM features f
+        JOIN themes t ON t.id = f.theme_id
+        WHERE ST_DWithin(
+            f.geom::geography,
+            ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography,
+            %s
+        )
+        ORDER BY distance_m
+    """, (
+        lng,
+        lat,
+        lng,
+        lat,
+        radius
+    ))
+
+    rows = cur.fetchall()
+
+    nearby_features = []
+
+    for row in rows:
+        nearby_features.append({
+            "id": row[0],
+            "theme_id": row[1],
+            "theme_name": row[2],
+            "name": row[3],
+            "description": row[4],
+            "lng": row[5],
+            "lat": row[6],
+            "distance_m": round(row[7], 2)
+        })
+
+    cur.close()
+    conn.close()
+
+    return jsonify({
+        "lat": lat,
+        "lng": lng,
+        "radius": radius,
+        "count": len(nearby_features),
+        "features": nearby_features
+    })
+
+
 @app.route("/features", methods=["POST"])
 def create_feature():
     data = request.get_json()
