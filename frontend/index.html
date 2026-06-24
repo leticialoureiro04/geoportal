@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>GeoPortal</title>
+
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+    <link rel="stylesheet" href="style.css?v=visibility-checkboxes">
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2>GeoPortal</h2>
+
+        <h3>Criar Tema</h3>
+
+        <form id="theme-form">
+            <label>Nome do tema:</label>
+            <input type="text" id="theme-name" required>
+
+            <label>Tipo de geometria:</label>
+            <select id="theme-geometry">
+                <option value="Point">Ponto</option>
+            </select>
+
+            <label>Cor:</label>
+            <input type="color" id="theme-color" value="#008000">
+
+            <button type="submit">Guardar Tema</button>
+        </form>
+
+        <hr>
+
+        <h3>Criar Elemento</h3>
+
+        <form id="feature-form">
+            <label>Tema:</label>
+            <select id="feature-theme" required></select>
+
+            <label>Nome:</label>
+            <input type="text"
+                   id="feature-name"
+                   placeholder="Preenchido automaticamente se ficar vazio">
+
+            <label>Descrição:</label>
+            <input type="text"
+                   id="feature-description"
+                   placeholder="Opcional">
+
+            <p id="selected-coordinates">
+                Clique no mapa para escolher a localização.
+            </p>
+
+            <button type="submit">Guardar Elemento</button>
+        </form>
+
+        <hr>
+
+        <h3>Temas</h3>
+        <ul id="theme-list"></ul>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="app.js?v=geoserver-wms"></script>
+
+</body>
+</html>
