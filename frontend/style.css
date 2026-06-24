@@ -412,6 +412,130 @@ button[type="button"]:hover {
     gap: 10px;
 }
 
+.presentation-icon-picker {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    background: #ffffff;
+    --theme-color: #2563eb;
+}
+
+.presentation-icon-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 7px;
+    border: 0;
+    border-right: 1px solid #e5e7eb;
+    border-radius: 0;
+    background: #ffffff;
+}
+
+.presentation-icon-option:last-child {
+    border-right: 0;
+}
+
+.presentation-icon-option:hover {
+    background: #f8fbff;
+}
+
+.presentation-icon-option.is-selected {
+    background: #eff6ff;
+    box-shadow: inset 0 0 0 1px #60a5fa;
+}
+
+.icon-shape {
+    position: relative;
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    color: var(--theme-color, #2563eb);
+}
+
+.icon-marker::before {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 1px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50% 50% 50% 0;
+    background: currentColor;
+    transform: rotate(-45deg);
+}
+
+.icon-marker::after {
+    content: "";
+    position: absolute;
+    left: 8px;
+    top: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ffffff;
+}
+
+.icon-circle::before {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border: 3px solid currentColor;
+    border-radius: 50%;
+}
+
+.icon-square::before {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border: 3px solid currentColor;
+    border-radius: 2px;
+}
+
+.icon-triangle::before {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 16px solid currentColor;
+}
+
+.icon-star::before {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    background: currentColor;
+    clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 56%, 79% 91%, 50% 70%, 21% 91%, 32% 56%, 2% 35%, 39% 35%);
+}
+
+.icon-tree::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 2px;
+    width: 14px;
+    height: 15px;
+    background: currentColor;
+    clip-path: polygon(50% 0, 100% 58%, 73% 58%, 100% 100%, 0 100%, 27% 58%, 0 58%);
+}
+
+.icon-tree::after {
+    content: "";
+    position: absolute;
+    left: 9px;
+    bottom: 1px;
+    width: 4px;
+    height: 6px;
+    border-radius: 1px;
+    background: #7c3f18;
+}
+
 .field-preview {
     margin-top: 4px;
 }
@@ -472,7 +596,7 @@ ul {
 
 .theme-toggle {
     display: grid;
-    grid-template-columns: 20px 18px minmax(0, 1fr);
+    grid-template-columns: 20px 26px minmax(0, 1fr);
     align-items: center;
     gap: 9px;
     min-height: 38px;
@@ -496,12 +620,33 @@ ul {
     accent-color: #2563eb;
 }
 
-.theme-color {
-    width: 16px;
-    height: 16px;
-    border: 1px solid rgba(15, 23, 42, 0.22);
-    border-radius: 50%;
-    flex: 0 0 16px;
+.theme-symbol {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    color: var(--theme-color, #2563eb);
+}
+
+.leaflet-theme-icon-wrapper {
+    border: 0;
+    background: transparent;
+}
+
+.leaflet-theme-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--theme-color, #2563eb);
+    filter: drop-shadow(0 3px 4px rgba(15, 23, 42, 0.32));
+}
+
+.leaflet-theme-icon .icon-shape {
+    width: 30px;
+    height: 30px;
 }
 
 .query-toggle {

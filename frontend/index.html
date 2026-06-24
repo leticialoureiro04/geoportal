@@ -8,7 +8,7 @@
           href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
     <link rel="icon" href="assets/logo-geoportal.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="style.css?v=modal-ui">
+    <link rel="stylesheet" href="style.css?v=icons-ui">
 </head>
 <body>
 
@@ -100,6 +100,29 @@
                     <input type="color" id="theme-color" value="#2563eb" aria-label="Cor do tema">
                 </div>
 
+                <span class="field-label">Icone de apresentacao:</span>
+                <div class="presentation-icon-picker" role="group" aria-label="Icone de apresentacao">
+                    <button type="button" class="presentation-icon-option is-selected" data-icon="marker" aria-pressed="true" aria-label="Marcador">
+                        <span class="icon-shape icon-marker"></span>
+                    </button>
+                    <button type="button" class="presentation-icon-option" data-icon="circle" aria-pressed="false" aria-label="Circulo">
+                        <span class="icon-shape icon-circle"></span>
+                    </button>
+                    <button type="button" class="presentation-icon-option" data-icon="square" aria-pressed="false" aria-label="Quadrado">
+                        <span class="icon-shape icon-square"></span>
+                    </button>
+                    <button type="button" class="presentation-icon-option" data-icon="triangle" aria-pressed="false" aria-label="Triangulo">
+                        <span class="icon-shape icon-triangle"></span>
+                    </button>
+                    <button type="button" class="presentation-icon-option" data-icon="star" aria-pressed="false" aria-label="Estrela">
+                        <span class="icon-shape icon-star"></span>
+                    </button>
+                    <button type="button" class="presentation-icon-option" data-icon="tree" aria-pressed="false" aria-label="Arvore">
+                        <span class="icon-shape icon-tree"></span>
+                    </button>
+                </div>
+                <input type="hidden" id="theme-icon" value="marker">
+
                 <div class="field-preview">
                     <div class="field-preview-title">Campos guardados</div>
                     <div class="field-table">
@@ -154,7 +177,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="app.js?v=modal-ui"></script>
+    <script src="app.js?v=icons-ui"></script>
 
 </body>
 </html>

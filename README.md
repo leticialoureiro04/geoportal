@@ -20,7 +20,7 @@ Subir PostGIS, pgAdmin e GeoServer:
 docker compose -f docker-compose-bd202526.yaml up -d
 ```
 
-Configurar o GeoServer para publicar a tabela `features` como WMS:
+Configurar o GeoServer para publicar as tabelas `features` e `areas_estudo` como WMS:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\configurar_geoserver.ps1
@@ -53,6 +53,7 @@ http://127.0.0.1:8000
 - pgAdmin: `http://127.0.0.1:5050`
 - GeoServer: `http://127.0.0.1:8080/geoserver`
 - WMS: `http://127.0.0.1:8080/geoserver/geoportal/wms`
+- Camadas WMS: `geoportal:features`, `geoportal:areas_estudo`
 
 Credenciais locais:
 

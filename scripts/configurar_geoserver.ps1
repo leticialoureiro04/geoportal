@@ -40,6 +40,29 @@ function Test-GeoServerPath {
     }
 }
 
+function Publish-PostGISLayer {
+    param(
+        [string]$Name,
+        [string]$Title
+    )
+
+    if (-not (Test-GeoServerPath -Path "/rest/layers/geoportal:$Name.xml")) {
+        Write-Host "A publicar tabela public.$Name como camada WMS geoportal:$Name ..."
+        $featureTypeXml = @"
+<featureType>
+    <name>$Name</name>
+    <nativeName>$Name</nativeName>
+    <title>$Title</title>
+    <srs>EPSG:4326</srs>
+    <enabled>true</enabled>
+</featureType>
+"@
+        Invoke-GeoServerRequest -Method "POST" -Path "/rest/workspaces/geoportal/datastores/postgis_geoportal/featuretypes?recalculate=nativebbox,latlonbbox" -Body $featureTypeXml | Out-Null
+    } else {
+        Write-Host "Camada geoportal:$Name ja existe."
+    }
+}
+
 Write-Host "A aguardar pelo GeoServer em $GeoServerUrl ..."
 
 $ready = $false
@@ -91,22 +114,65 @@ if (-not (Test-GeoServerPath -Path "/rest/workspaces/geoportal/datastores/postgi
     Write-Host "Datastore postgis_geoportal ja existe."
 }
 
-if (-not (Test-GeoServerPath -Path "/rest/layers/geoportal:features.xml")) {
-    Write-Host "A publicar tabela public.features como camada WMS geoportal:features ..."
-    $featureTypeXml = @"
-<featureType>
-    <name>features</name>
-    <nativeName>features</nativeName>
-    <title>GeoPortal Features</title>
-    <srs>EPSG:4326</srs>
-    <enabled>true</enabled>
-</featureType>
+Publish-PostGISLayer -Name "features" -Title "GeoPortal Features"
+Publish-PostGISLayer -Name "areas_estudo" -Title "Area de Estudo"
+
+$areaStyleSld = @"
+<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0"
+    xmlns="http://www.opengis.net/sld"
+    xmlns:ogc="http://www.opengis.net/ogc"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd">
+    <NamedLayer>
+        <Name>area_estudo_style</Name>
+        <UserStyle>
+            <Title>Area de Estudo</Title>
+            <FeatureTypeStyle>
+                <Rule>
+                    <PolygonSymbolizer>
+                        <Fill>
+                            <CssParameter name="fill">#2563eb</CssParameter>
+                            <CssParameter name="fill-opacity">0.10</CssParameter>
+                        </Fill>
+                        <Stroke>
+                            <CssParameter name="stroke">#1d4ed8</CssParameter>
+                            <CssParameter name="stroke-width">3</CssParameter>
+                        </Stroke>
+                    </PolygonSymbolizer>
+                </Rule>
+            </FeatureTypeStyle>
+        </UserStyle>
+    </NamedLayer>
+</StyledLayerDescriptor>
 "@
-    Invoke-GeoServerRequest -Method "POST" -Path "/rest/workspaces/geoportal/datastores/postgis_geoportal/featuretypes?recalculate=nativebbox,latlonbbox" -Body $featureTypeXml | Out-Null
+
+if (-not (Test-GeoServerPath -Path "/rest/workspaces/geoportal/styles/area_estudo_style.xml")) {
+    Write-Host "A criar estilo area_estudo_style ..."
+    $styleXml = @"
+<style>
+    <name>area_estudo_style</name>
+    <filename>area_estudo_style.sld</filename>
+</style>
+"@
+    Invoke-GeoServerRequest -Method "POST" -Path "/rest/workspaces/geoportal/styles" -Body $styleXml | Out-Null
 } else {
-    Write-Host "Camada geoportal:features ja existe."
+    Write-Host "Estilo area_estudo_style ja existe."
 }
+
+Invoke-GeoServerRequest -Method "PUT" -Path "/rest/workspaces/geoportal/styles/area_estudo_style" -Body $areaStyleSld -ContentType "application/vnd.ogc.sld+xml" | Out-Null
+
+$layerStyleXml = @"
+<layer>
+    <defaultStyle>
+        <name>area_estudo_style</name>
+    </defaultStyle>
+</layer>
+"@
+Invoke-GeoServerRequest -Method "PUT" -Path "/rest/layers/geoportal:areas_estudo" -Body $layerStyleXml | Out-Null
 
 Write-Host "GeoServer configurado."
 Write-Host "WMS: $GeoServerUrl/geoportal/wms"
 Write-Host "Camada: geoportal:features"
+Write-Host "Camada geral: geoportal:areas_estudo"

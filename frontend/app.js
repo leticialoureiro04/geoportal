@@ -13,6 +13,15 @@ let themeLayers = {};
 let queryMarker = null;
 let queryCircle = null;
 
+const availableThemeIcons = [
+    'marker',
+    'circle',
+    'square',
+    'triangle',
+    'star',
+    'tree'
+];
+
 const map = L.map('map').setView([41.69, -8.83], 13);
 
 const openStreetMap = L.tileLayer(
@@ -50,8 +59,22 @@ const geoserverFeaturesWms = L.tileLayer.wms(
 
 geoserverFeaturesWms.addTo(map);
 
+const geoserverAreaEstudoWms = L.tileLayer.wms(
+    'http://127.0.0.1:8080/geoserver/geoportal/wms',
+    {
+        layers: 'geoportal:areas_estudo',
+        format: 'image/png',
+        transparent: true,
+        version: '1.1.1',
+        attribution: 'GeoServer WMS'
+    }
+);
+
+geoserverAreaEstudoWms.addTo(map);
+
 const overlayMaps = {
-    'GeoServer WMS - Elementos': geoserverFeaturesWms
+    'GeoServer WMS - Elementos': geoserverFeaturesWms,
+    'GeoServer WMS - Area de Estudo': geoserverAreaEstudoWms
 };
 
 L.control.layers(baseMaps, overlayMaps, { collapsed: false }).addTo(map);
@@ -123,8 +146,61 @@ function setThemeGeometry(geometryType) {
 
 function setThemeColor(color) {
     const colorInput = document.getElementById('theme-color');
+    const iconPicker = document.querySelector('.presentation-icon-picker');
 
     colorInput.value = color;
+
+    if (iconPicker) {
+        iconPicker.style.setProperty('--theme-color', color);
+    }
+}
+
+function normalizeThemeIcon(icon) {
+    if (availableThemeIcons.includes(icon)) {
+        return icon;
+    }
+
+    return 'marker';
+}
+
+function setThemeIcon(icon) {
+    const normalizedIcon = normalizeThemeIcon(icon);
+    const iconInput = document.getElementById('theme-icon');
+
+    iconInput.value = normalizedIcon;
+
+    document.querySelectorAll('.presentation-icon-option').forEach(button => {
+        const isSelected = button.dataset.icon === normalizedIcon;
+
+        button.classList.toggle('is-selected', isSelected);
+        button.setAttribute('aria-pressed', String(isSelected));
+    });
+}
+
+function createThemeIconElement(icon, color, className) {
+    const wrapper = document.createElement('span');
+    const shape = document.createElement('span');
+
+    wrapper.className = className;
+    wrapper.style.setProperty('--theme-color', color || '#2563eb');
+    shape.className = `icon-shape icon-${normalizeThemeIcon(icon)}`;
+
+    wrapper.appendChild(shape);
+
+    return wrapper;
+}
+
+function createLeafletThemeIcon(icon, color) {
+    const normalizedIcon = normalizeThemeIcon(icon);
+    const iconColor = color || '#2563eb';
+
+    return L.divIcon({
+        className: 'leaflet-theme-icon-wrapper',
+        html: `<span class="leaflet-theme-icon" style="--theme-color: ${iconColor}"><span class="icon-shape icon-${normalizedIcon}"></span></span>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 30],
+        popupAnchor: [0, -28]
+    });
 }
 
 function resetQueryMode() {
@@ -200,7 +276,9 @@ function renderFeatureLayers() {
 
         const featureLayer = L.geoJSON(feature.geometry, {
             pointToLayer: function (geoJsonFeature, latlng) {
-                return L.marker(latlng);
+                return L.marker(latlng, {
+                    icon: createLeafletThemeIcon(feature.icon, color)
+                });
             },
             style: function () {
                 return {
@@ -249,15 +327,13 @@ async function loadThemes() {
             setThemeVisibility(theme.id, checkbox.checked);
         });
 
-        const color = document.createElement('span');
-        color.className = 'theme-color';
-        color.style.backgroundColor = theme.color;
+        const icon = createThemeIconElement(theme.icon, theme.color, 'theme-symbol');
 
         const name = document.createElement('span');
         name.textContent = `${theme.name} (${theme.geometry_type})`;
 
         label.appendChild(checkbox);
-        label.appendChild(color);
+        label.appendChild(icon);
         label.appendChild(name);
         li.appendChild(label);
         list.appendChild(li);
@@ -350,6 +426,7 @@ function updateSelectedGeometryPreview() {
         selectedLat = point.lat;
         selectedLng = point.lng;
         tempMarker = L.marker([point.lat, point.lng]).addTo(map);
+        tempMarker.setIcon(createLeafletThemeIcon(getSelectedTheme()?.icon, getSelectedTheme()?.color));
         selectedCoordinates.innerText =
             `Localizacao selecionada: ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`;
         return;
@@ -531,6 +608,7 @@ document
     .addEventListener('click', function () {
         setThemeGeometry(document.getElementById('theme-geometry').value);
         setThemeColor(document.getElementById('theme-color').value);
+        setThemeIcon(document.getElementById('theme-icon').value);
         openModal('theme-modal');
     });
 
@@ -584,6 +662,14 @@ document
     });
 
 document
+    .querySelectorAll('.presentation-icon-option')
+    .forEach(button => {
+        button.addEventListener('click', function () {
+            setThemeIcon(button.dataset.icon);
+        });
+    });
+
+document
     .getElementById('query-mode')
     .addEventListener('change', function (event) {
         if (event.target.checked) {
@@ -606,6 +692,7 @@ document
         const name = document.getElementById('theme-name').value;
         const geometryType = document.getElementById('theme-geometry').value;
         const color = document.getElementById('theme-color').value;
+        const icon = document.getElementById('theme-icon').value;
 
         await fetch(`${API_URL}/themes`, {
             method: 'POST',
@@ -615,13 +702,15 @@ document
             body: JSON.stringify({
                 name: name,
                 geometry_type: geometryType,
-                color: color
+                color: color,
+                icon: icon
             })
         });
 
         document.getElementById('theme-form').reset();
         setThemeGeometry('Point');
         setThemeColor('#2563eb');
+        setThemeIcon('marker');
 
         await loadThemes();
 

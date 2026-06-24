@@ -19,7 +19,7 @@ def get_themes():
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT id, name, geometry_type, color
+        SELECT id, name, geometry_type, color, icon
         FROM themes
         ORDER BY id
     """)
@@ -33,7 +33,8 @@ def get_themes():
             "id": row[0],
             "name": row[1],
             "geometry_type": row[2],
-            "color": row[3]
+            "color": row[3],
+            "icon": row[4] or "marker"
         })
 
     cur.close()
@@ -49,14 +50,15 @@ def create_theme():
     name = data["name"]
     geometry_type = data["geometry_type"]
     color = data["color"]
+    icon = data.get("icon", "marker")
 
     conn = get_connection()
     cur = conn.cursor()
 
     cur.execute("""
-        INSERT INTO themes (name, geometry_type, color)
-        VALUES (%s, %s, %s)
-    """, (name, geometry_type, color))
+        INSERT INTO themes (name, geometry_type, color, icon)
+        VALUES (%s, %s, %s, %s)
+    """, (name, geometry_type, color, icon))
 
     conn.commit()
 
@@ -81,7 +83,8 @@ def get_features():
             f.description,
             ST_AsGeoJSON(f.geom),
             GeometryType(f.geom),
-            t.color
+            t.color,
+            t.icon
         FROM features f
         JOIN themes t ON t.id = f.theme_id
         ORDER BY f.id
@@ -99,7 +102,8 @@ def get_features():
             "description": row[3],
             "geometry": json.loads(row[4]),
             "geometry_type": row[5],
-            "color": row[6]
+            "color": row[6],
+            "icon": row[7] or "marker"
         })
 
     cur.close()
