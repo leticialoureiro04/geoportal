@@ -56,6 +56,91 @@ const overlayMaps = {
 
 L.control.layers(baseMaps, overlayMaps, { collapsed: false }).addTo(map);
 
+function getActiveModal() {
+    return document.querySelector('.modal-card:not([hidden])');
+}
+
+function openModal(modalId) {
+    const modalLayer = document.getElementById('modal-layer');
+    const modal = document.getElementById(modalId);
+
+    document.querySelectorAll('.modal-card').forEach(card => {
+        card.hidden = true;
+    });
+
+    modalLayer.hidden = false;
+    modal.hidden = false;
+}
+
+function closeModal() {
+    const activeModal = getActiveModal();
+    const wasFeatureModal = activeModal && activeModal.id === 'feature-modal';
+
+    document.querySelectorAll('.modal-card').forEach(card => {
+        card.hidden = true;
+    });
+
+    document.getElementById('modal-layer').hidden = true;
+
+    if (wasFeatureModal) {
+        clearSelectedGeometry();
+    }
+}
+
+function isFeatureModalOpen() {
+    return !document.getElementById('feature-modal').hidden;
+}
+
+function getGeometryLabel(geometryType) {
+    if (geometryType === 'LineString') {
+        return 'Linha';
+    }
+
+    if (geometryType === 'Polygon') {
+        return 'Poligono';
+    }
+
+    return 'Ponto';
+}
+
+function setThemeGeometry(geometryType) {
+    const geometrySelect = document.getElementById('theme-geometry');
+    const geometryLabel = document.getElementById('field-geometry-label');
+
+    geometrySelect.value = geometryType;
+
+    if (geometryLabel) {
+        geometryLabel.textContent = getGeometryLabel(geometryType);
+    }
+
+    document.querySelectorAll('.geometry-option').forEach(button => {
+        const isSelected = button.dataset.geometry === geometryType;
+
+        button.classList.toggle('is-selected', isSelected);
+        button.setAttribute('aria-pressed', String(isSelected));
+    });
+}
+
+function setThemeColor(color) {
+    const colorInput = document.getElementById('theme-color');
+
+    colorInput.value = color;
+}
+
+function resetQueryMode() {
+    const queryMode = document.getElementById('query-mode');
+
+    if (!queryMode.checked) {
+        return;
+    }
+
+    queryMode.checked = false;
+    clearQueryLayers();
+    document.getElementById('query-results').innerHTML = '';
+    document.getElementById('query-status').textContent =
+        'Ative a consulta e clique no mapa.';
+}
+
 function isThemeVisible(themeId) {
     return themeVisibility[themeId] !== false;
 }
@@ -407,6 +492,10 @@ map.on('click', function (event) {
         return;
     }
 
+    if (!isFeatureModalOpen()) {
+        return;
+    }
+
     if (getSelectedGeometryType() === 'Point') {
         selectedGeometryPoints = [event.latlng];
     } else {
@@ -435,6 +524,63 @@ document
     .getElementById('clear-geometry')
     .addEventListener('click', function () {
         clearSelectedGeometry();
+    });
+
+document
+    .getElementById('open-theme-modal')
+    .addEventListener('click', function () {
+        setThemeGeometry(document.getElementById('theme-geometry').value);
+        setThemeColor(document.getElementById('theme-color').value);
+        openModal('theme-modal');
+    });
+
+document
+    .getElementById('open-feature-modal')
+    .addEventListener('click', function () {
+        if (themes.length === 0) {
+            alert('Crie primeiro um tema para inserir elementos.');
+            openModal('theme-modal');
+            return;
+        }
+
+        resetQueryMode();
+        clearSelectedGeometry();
+
+        const nameInput = document.getElementById('feature-name');
+
+        if (nameInput.value.trim() === '') {
+            nameInput.value = generateFeatureName();
+        }
+
+        openModal('feature-modal');
+    });
+
+document
+    .querySelectorAll('[data-close-modal]')
+    .forEach(button => {
+        button.addEventListener('click', function () {
+            closeModal();
+        });
+    });
+
+document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && !document.getElementById('modal-layer').hidden) {
+        closeModal();
+    }
+});
+
+document
+    .querySelectorAll('.geometry-option')
+    .forEach(button => {
+        button.addEventListener('click', function () {
+            setThemeGeometry(button.dataset.geometry);
+        });
+    });
+
+document
+    .getElementById('theme-color')
+    .addEventListener('input', function (event) {
+        setThemeColor(event.target.value);
     });
 
 document
@@ -474,8 +620,12 @@ document
         });
 
         document.getElementById('theme-form').reset();
+        setThemeGeometry('Point');
+        setThemeColor('#2563eb');
 
         await loadThemes();
+
+        closeModal();
     });
 
 document
@@ -523,6 +673,8 @@ document
         clearSelectedGeometry();
 
         await loadFeatures();
+
+        closeModal();
     });
 
 loadThemes();

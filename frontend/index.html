@@ -8,7 +8,7 @@
           href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
     <link rel="icon" href="assets/logo-geoportal.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="style.css?v=logo-ui">
+    <link rel="stylesheet" href="style.css?v=modal-ui">
 </head>
 <body>
 
@@ -27,52 +27,11 @@
             <h2>GeoPortal</h2>
 
             <section class="sidebar-section">
-                <h3>Criar Tema</h3>
-
-                <form id="theme-form">
-                    <label>Nome do tema:</label>
-                    <input type="text" id="theme-name" required>
-
-                    <label>Tipo de geometria:</label>
-                    <select id="theme-geometry">
-                        <option value="Point">Ponto</option>
-                        <option value="LineString">Linha</option>
-                        <option value="Polygon">Poligono</option>
-                    </select>
-
-                    <label>Cor:</label>
-                    <input type="color" id="theme-color" value="#008000">
-
-                    <button type="submit">Guardar Tema</button>
-                </form>
-            </section>
-
-            <section class="sidebar-section">
-                <h3>Criar Elemento</h3>
-
-                <form id="feature-form">
-                    <label>Tema:</label>
-                    <select id="feature-theme" required></select>
-
-                    <label>Nome:</label>
-                    <input type="text"
-                           id="feature-name"
-                           placeholder="Preenchido automaticamente se ficar vazio">
-
-                    <label>Descri&ccedil;&atilde;o:</label>
-                    <input type="text"
-                           id="feature-description"
-                           placeholder="Opcional">
-
-                    <p id="selected-coordinates">
-                        Clique no mapa para escolher a localiza&ccedil;&atilde;o.
-                    </p>
-
-                    <div class="button-row">
-                        <button type="button" id="clear-geometry">Limpar Desenho</button>
-                        <button type="submit">Guardar Elemento</button>
-                    </div>
-                </form>
+                <div class="section-title-row">
+                    <h3>Temas</h3>
+                    <button type="button" id="open-theme-modal" class="small-action">Novo tema</button>
+                </div>
+                <ul id="theme-list"></ul>
             </section>
 
             <section class="sidebar-section">
@@ -92,11 +51,11 @@
 
                 <ul id="query-results"></ul>
             </section>
-
-            <section class="sidebar-section">
-                <h3>Temas</h3>
-                <ul id="theme-list"></ul>
-            </section>
+            <div class="sidebar-actions">
+                <button type="button" id="open-feature-modal" class="primary-action">
+                    + Inserir elemento
+                </button>
+            </div>
         </aside>
 
         <section id="map-panel">
@@ -104,8 +63,98 @@
         </section>
     </main>
 
+    <div id="modal-layer" class="modal-layer" hidden>
+        <section id="theme-modal" class="modal-card" aria-labelledby="theme-modal-title" hidden>
+            <div class="modal-header">
+                <h3 id="theme-modal-title">Criar Novo Tema</h3>
+                <button type="button" class="modal-close" data-close-modal aria-label="Fechar">x</button>
+            </div>
+
+            <form id="theme-form">
+                <label>Nome do tema:</label>
+                <input type="text" id="theme-name" placeholder="Ex.: Iluminacao publica" required>
+
+                <span class="field-label">Tipo de geometria:</span>
+                <div class="geometry-picker" role="group" aria-label="Tipo de geometria">
+                    <button type="button" class="geometry-option is-selected" data-geometry="Point" aria-pressed="true">
+                        <span class="geometry-icon geometry-point"></span>
+                        Ponto
+                    </button>
+                    <button type="button" class="geometry-option" data-geometry="LineString" aria-pressed="false">
+                        <span class="geometry-icon geometry-line"></span>
+                        Linha
+                    </button>
+                    <button type="button" class="geometry-option" data-geometry="Polygon" aria-pressed="false">
+                        <span class="geometry-icon geometry-polygon"></span>
+                        Poligono
+                    </button>
+                </div>
+                <select id="theme-geometry" class="native-select-hidden" aria-hidden="true" tabindex="-1">
+                    <option value="Point">Ponto</option>
+                    <option value="LineString">Linha</option>
+                    <option value="Polygon">Poligono</option>
+                </select>
+
+                <span class="field-label">Cor de apresentacao:</span>
+                <div class="color-picker-row">
+                    <input type="color" id="theme-color" value="#2563eb" aria-label="Cor do tema">
+                </div>
+
+                <div class="field-preview">
+                    <div class="field-preview-title">Campos guardados</div>
+                    <div class="field-table">
+                        <div class="field-table-head">Campo</div>
+                        <div class="field-table-head">Tipo</div>
+                        <div>Nome</div>
+                        <div>Texto</div>
+                        <div>Descricao</div>
+                        <div>Texto</div>
+                        <div>Geometria</div>
+                        <div id="field-geometry-label">Ponto</div>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" data-close-modal>Cancelar</button>
+                    <button type="submit">Guardar</button>
+                </div>
+            </form>
+        </section>
+
+        <section id="feature-modal" class="modal-card" aria-labelledby="feature-modal-title" hidden>
+            <div class="modal-header">
+                <h3 id="feature-modal-title">Inserir Elemento</h3>
+                <button type="button" class="modal-close" data-close-modal aria-label="Fechar">x</button>
+            </div>
+
+            <form id="feature-form">
+                <label>Tema:</label>
+                <select id="feature-theme" required></select>
+
+                <label>Nome:</label>
+                <input type="text"
+                       id="feature-name"
+                       placeholder="Preenchido automaticamente se ficar vazio">
+
+                <label>Descri&ccedil;&atilde;o:</label>
+                <input type="text"
+                       id="feature-description"
+                       placeholder="Opcional">
+
+                <p id="selected-coordinates">
+                    Clique no mapa para escolher a localiza&ccedil;&atilde;o.
+                </p>
+
+                <div class="modal-actions">
+                    <button type="button" id="clear-geometry">Limpar Desenho</button>
+                    <button type="submit">Guardar</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="app.js?v=mixed-geometries"></script>
+    <script src="app.js?v=modal-ui"></script>
 
 </body>
 </html>
