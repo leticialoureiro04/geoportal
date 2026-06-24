@@ -12,5 +12,5 @@ CREATE TABLE IF NOT EXISTS features (
     theme_id INTEGER REFERENCES themes(id) ON DELETE CASCADE,
     name VARCHAR(100),
     description TEXT,
-    geom geometry(Point, 4326)
+    geom geometry(Geometry, 4326)
 );

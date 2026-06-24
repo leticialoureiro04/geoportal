@@ -3,6 +3,8 @@ const API_URL = 'http://127.0.0.1:5000';
 let selectedLat = null;
 let selectedLng = null;
 let tempMarker = null;
+let tempFeatureLayer = null;
+let selectedGeometryPoints = [];
 let featureMarkers = [];
 let themes = [];
 let features = [];
@@ -109,14 +111,26 @@ function renderFeatureLayers() {
 
     features.forEach(feature => {
         const layer = ensureThemeLayer(feature.theme_id);
+        const color = feature.color || '#2563eb';
 
-        const marker = L.marker([feature.lat, feature.lng])
-            .bindPopup(
-                `<b>${feature.name}</b><br>${feature.description}`
-            );
+        const featureLayer = L.geoJSON(feature.geometry, {
+            pointToLayer: function (geoJsonFeature, latlng) {
+                return L.marker(latlng);
+            },
+            style: function () {
+                return {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.25,
+                    weight: 3
+                };
+            }
+        }).bindPopup(
+            `<b>${feature.name}</b><br>${feature.description}`
+        );
 
-        marker.addTo(layer);
-        featureMarkers.push(marker);
+        featureLayer.addTo(layer);
+        featureMarkers.push(featureLayer);
     });
 
     syncAllThemeLayerVisibility();
@@ -189,6 +203,124 @@ function generateFeatureName() {
     const themeName = themeSelect.options[themeSelect.selectedIndex].text;
 
     return `${themeName} ${features.length + 1}`;
+}
+
+function getSelectedTheme() {
+    const themeSelect = document.getElementById('feature-theme');
+    const themeId = parseInt(themeSelect.value);
+
+    return themes.find(theme => theme.id === themeId);
+}
+
+function getSelectedGeometryType() {
+    const theme = getSelectedTheme();
+
+    if (!theme) {
+        return 'Point';
+    }
+
+    return theme.geometry_type;
+}
+
+function clearSelectedGeometry() {
+    selectedLat = null;
+    selectedLng = null;
+    selectedGeometryPoints = [];
+
+    if (tempMarker !== null) {
+        map.removeLayer(tempMarker);
+        tempMarker = null;
+    }
+
+    if (tempFeatureLayer !== null) {
+        map.removeLayer(tempFeatureLayer);
+        tempFeatureLayer = null;
+    }
+
+    document.getElementById('selected-coordinates').innerText =
+        'Clique no mapa para escolher a localizacao.';
+}
+
+function updateSelectedGeometryPreview() {
+    const geometryType = getSelectedGeometryType();
+    const selectedCoordinates = document.getElementById('selected-coordinates');
+
+    if (tempMarker !== null) {
+        map.removeLayer(tempMarker);
+        tempMarker = null;
+    }
+
+    if (tempFeatureLayer !== null) {
+        map.removeLayer(tempFeatureLayer);
+        tempFeatureLayer = null;
+    }
+
+    if (selectedGeometryPoints.length === 0) {
+        selectedCoordinates.innerText = 'Clique no mapa para escolher a localizacao.';
+        return;
+    }
+
+    if (geometryType === 'Point') {
+        const point = selectedGeometryPoints[0];
+        selectedLat = point.lat;
+        selectedLng = point.lng;
+        tempMarker = L.marker([point.lat, point.lng]).addTo(map);
+        selectedCoordinates.innerText =
+            `Localizacao selecionada: ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`;
+        return;
+    }
+
+    const latLngs = selectedGeometryPoints.map(point => [point.lat, point.lng]);
+    const color = getSelectedTheme()?.color || '#2563eb';
+
+    if (geometryType === 'Polygon' && latLngs.length >= 3) {
+        tempFeatureLayer = L.polygon(latLngs, {
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.2
+        }).addTo(map);
+    } else {
+        tempFeatureLayer = L.polyline(latLngs, {
+            color: color,
+            weight: 3
+        }).addTo(map);
+    }
+
+    const label = geometryType === 'Polygon' ? 'vertice(s)' : 'ponto(s)';
+    selectedCoordinates.innerText =
+        `${selectedGeometryPoints.length} ${label} selecionado(s). Clique no mapa para adicionar mais.`;
+}
+
+function buildSelectedGeometry() {
+    const geometryType = getSelectedGeometryType();
+    const coordinates = selectedGeometryPoints.map(point => [point.lng, point.lat]);
+
+    if (geometryType === 'Point') {
+        return {
+            type: 'Point',
+            coordinates: coordinates[0]
+        };
+    }
+
+    if (geometryType === 'LineString') {
+        return {
+            type: 'LineString',
+            coordinates: coordinates
+        };
+    }
+
+    const polygonCoordinates = coordinates.slice();
+    const firstPoint = polygonCoordinates[0];
+    const lastPoint = polygonCoordinates[polygonCoordinates.length - 1];
+
+    if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
+        polygonCoordinates.push(firstPoint);
+    }
+
+    return {
+        type: 'Polygon',
+        coordinates: [polygonCoordinates]
+    };
 }
 
 function clearQueryLayers() {
@@ -275,17 +407,13 @@ map.on('click', function (event) {
         return;
     }
 
-    selectedLat = event.latlng.lat;
-    selectedLng = event.latlng.lng;
-
-    document.getElementById('selected-coordinates').innerText =
-        `Localiza\u00e7\u00e3o selecionada: ${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}`;
-
-    if (tempMarker !== null) {
-        map.removeLayer(tempMarker);
+    if (getSelectedGeometryType() === 'Point') {
+        selectedGeometryPoints = [event.latlng];
+    } else {
+        selectedGeometryPoints.push(event.latlng);
     }
 
-    tempMarker = L.marker([selectedLat, selectedLng]).addTo(map);
+    updateSelectedGeometryPreview();
 
     const nameInput = document.getElementById('feature-name');
 
@@ -300,6 +428,13 @@ document
         const nameInput = document.getElementById('feature-name');
 
         nameInput.value = generateFeatureName();
+        clearSelectedGeometry();
+    });
+
+document
+    .getElementById('clear-geometry')
+    .addEventListener('click', function () {
+        clearSelectedGeometry();
     });
 
 document
@@ -348,8 +483,11 @@ document
     .addEventListener('submit', async function (event) {
         event.preventDefault();
 
-        if (selectedLat === null || selectedLng === null) {
-            alert('Primeiro clique no mapa para escolher a localiza\u00e7\u00e3o.');
+        const geometryType = getSelectedGeometryType();
+        const minPoints = geometryType === 'Point' ? 1 : geometryType === 'LineString' ? 2 : 3;
+
+        if (selectedGeometryPoints.length < minPoints) {
+            alert(`Selecione pelo menos ${minPoints} ponto(s) no mapa para esta geometria.`);
             return;
         }
 
@@ -376,23 +514,13 @@ document
                 theme_id: parseInt(themeId),
                 name: name,
                 description: description,
-                lat: selectedLat,
-                lng: selectedLng
+                geometry: buildSelectedGeometry()
             })
         });
 
         document.getElementById('feature-form').reset();
 
-        document.getElementById('selected-coordinates').innerText =
-            'Clique no mapa para escolher a localiza\u00e7\u00e3o.';
-
-        selectedLat = null;
-        selectedLng = null;
-
-        if (tempMarker !== null) {
-            map.removeLayer(tempMarker);
-            tempMarker = null;
-        }
+        clearSelectedGeometry();
 
         await loadFeatures();
     });

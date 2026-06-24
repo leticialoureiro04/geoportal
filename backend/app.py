@@ -1,3 +1,5 @@
+import json
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from db import get_connection
@@ -73,14 +75,16 @@ def get_features():
 
     cur.execute("""
         SELECT
-            id,
-            theme_id,
-            name,
-            description,
-            ST_X(geom),
-            ST_Y(geom)
-        FROM features
-        ORDER BY id
+            f.id,
+            f.theme_id,
+            f.name,
+            f.description,
+            ST_AsGeoJSON(f.geom),
+            GeometryType(f.geom),
+            t.color
+        FROM features f
+        JOIN themes t ON t.id = f.theme_id
+        ORDER BY f.id
     """)
 
     rows = cur.fetchall()
@@ -93,8 +97,9 @@ def get_features():
             "theme_id": row[1],
             "name": row[2],
             "description": row[3],
-            "lng": row[4],
-            "lat": row[5]
+            "geometry": json.loads(row[4]),
+            "geometry_type": row[5],
+            "color": row[6]
         })
 
     cur.close()
@@ -129,8 +134,8 @@ def get_nearby_features():
             t.name,
             f.name,
             f.description,
-            ST_X(f.geom),
-            ST_Y(f.geom),
+            ST_X(ST_PointOnSurface(f.geom)),
+            ST_Y(ST_PointOnSurface(f.geom)),
             ST_Distance(
                 f.geom::geography,
                 ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography
@@ -186,8 +191,15 @@ def create_feature():
     theme_id = data["theme_id"]
     name = data["name"]
     description = data["description"]
-    lat = data["lat"]
-    lng = data["lng"]
+    geometry = data.get("geometry")
+
+    if geometry is None:
+        lat = data["lat"]
+        lng = data["lng"]
+        geometry = {
+            "type": "Point",
+            "coordinates": [lng, lat]
+        }
 
     conn = get_connection()
     cur = conn.cursor()
@@ -198,14 +210,13 @@ def create_feature():
             %s,
             %s,
             %s,
-            ST_SetSRID(ST_MakePoint(%s, %s), 4326)
+            ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326)
         )
     """, (
         theme_id,
         name,
         description,
-        lng,
-        lat
+        json.dumps(geometry)
     ))
 
     conn.commit()
